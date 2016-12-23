@@ -1,4 +1,11 @@
 #!/bin/bash
 
-# create user for the checker server
-useradd -M edurange-password
+# run checker
+ruby checker &
+
+for f in `find /home -maxdepth 1 -type d`; do 
+  if [ $f != "/home" ] ; then
+    user=${f:6}
+    register $user
+  fi
+done
