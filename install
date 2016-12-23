@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# create user for the checker server
+useradd -M edurange-password

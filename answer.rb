@@ -1,12 +1,9 @@
 require 'socket'
 
-socket = UNIXSocket.new("socket")
-
-1.times do |n|
-  answer = "Takako:brighton\n"
-  puts "try:#{answer}"
-  socket.write(answer)
-  puts socket.gets
-end
+socket = UNIXSocket.new("/var/run/edurange/passwords/answer.sock")
+answer = "foo:bar\n"
+puts "trying: #{answer}"
+socket.write answer
+puts socket.gets
 
 socket.close

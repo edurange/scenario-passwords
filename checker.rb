@@ -3,7 +3,7 @@ require 'fileutils'
 
 class LogPassGen
 
-  @home_dir = 'home'
+  @home_dir = '/home'
   @characters = ["Takako", "Kenna", "Ike"]
 
   @var_holders = [
@@ -22,6 +22,7 @@ class LogPassGen
   ]
 
   def self.create user_name
+    @user_name = user_name
     @user_dir = "#{@home_dir}/#{user_name}"
     return nil, nil if not File.exists? @user_dir
 
@@ -34,6 +35,7 @@ class LogPassGen
     self.create_simple_vars
     self.create_passwords_character_0
     self.write_log_file
+    self.create_user_answer_templates
 
     return @passwords, @chat_log
   end
@@ -78,12 +80,20 @@ class LogPassGen
     c[@var_simples['_catchphrase_']] = 1
     c[@var_simples['_hometown_']] = 1
     c[@var_simples['_franchise_']] = 1
-    c[@var_simples['_elementary_']] = 1
+    c[@var_simples['_elementaryschool_']] = 1
     c[@var_simples['_favteacher_']] = 1
   end
 
   def self.write_log_file
-    File.open("#{@user_dir}/chatlog", "w") { |f| f.write(@chat_log) }
+    path = "#{@user_dir}/chatlog"
+    File.open(path, "w") { |f| f.write(@chat_log) }
+    FileUtils.chown @user_name, @user_name, path
+  end
+
+  def self.create_user_answer_templates
+    answer_template_path = "#{@user_dir}/answer.rb"
+    FileUtils.cp 'answer.rb', answer_template_path
+    FileUtils.chown @user_name, @user_name, answer_template_path
   end
 end
 
@@ -95,37 +105,37 @@ class AnswerChecker
     @@points = 0
     @@answered = {}
 
-    def initialize(uid, passwords, chatlog)
+    def initialize(uid, passwords, chatlog, logpath)
       @@uid = uid
       @@username = `getent passwd #{@@uid}`.split(':')[0]
       @@passwords = passwords
       @@chatlog = chatlog
-      create_log_files
+      create_log_files logpath
     end
 
-    def create_log_files
+    def create_log_files(logpath)
 
-      log_dir = "log/#{@@username}"
-      if not File.exists? log_dir
-        FileUtils.mkdir log_dir
+      @@user_log_path = "#{logpath}/#{@@username}"
+      if not File.exists? @@user_log_path
+        FileUtils.mkdir @@user_log_path
       end
 
-      @@attempts_file = File.open("#{log_dir}/attempts", "w")
+      @@attempts_file = File.open("#{@@user_log_path}/attempts", "w")
       @@attempts_file.sync = true
       @@attempts_file.write 0
 
-      @@points_file = File.open("#{log_dir}/points", "w")
+      @@points_file = File.open("#{@@user_log_path}/points", "w")
       @@points_file.sync = true
       @@points_file.write 0
 
-      @@answers_file = File.open("#{log_dir}/answers", "w")
+      @@answers_file = File.open("#{@@user_log_path}/answers", "w")
       @@answers_file.sync = true
 
-      chatlog_file = File.open("#{log_dir}/chatlog", "w")
+      chatlog_file = File.open("#{@@user_log_path}/chatlog", "w")
       chatlog_file.sync = true
       chatlog_file.write(@@chatlog)
 
-      passwords_file = File.open("#{log_dir}/passwords", "w")
+      passwords_file = File.open("#{@@user_log_path}/passwords", "w")
       passwords_file.sync = true
       @@passwords.each do |character, passhash|
         passhash.each do |password, points|
@@ -161,15 +171,28 @@ class AnswerChecker
     end
   end
 
+  @@data_dir = '/var/run/edurange/passwords'
+  @@sock_register_path = "#{@@data_dir}/register.sock"
+  @@sock_answer_path = "#{@@data_dir}/answer.sock"
+  @@log_path = "#{@@data_dir}/log"
+
   @@passwords = {}
   @@user_ids = {}
   @@user_data = {}
   @@rate = 1
 
   def initialize
-    FileUtils.rm "register" if File.exists? "register"
-    FileUtils.rm "answer" if File.exists? "answer"
 
+    if not File.exists? @@data_dir
+      FileUtils.mkpath @@data_dir
+    end
+    FileUtils.chown 'edurange-password', 'edurange-password', @@data_dir
+
+    FileUtils.rm @@sock_register_path if File.exists? @@sock_register_path
+    FileUtils.rm @@sock_answer_path if File.exists? @@sock_answer_path
+
+    FileUtils.mkdir @@log_path if not File.exists? @@log_path
+    
     Thread.new do 
       register_loop
     end
@@ -177,18 +200,21 @@ class AnswerChecker
   end
 
   def register_loop
-    serv = UNIXServer.new('register')
+    serv = UNIXServer.new(@@sock_register_path)
+    FileUtils.chmod 0600, @@sock_register_path
     loop do
       client = serv.accept
 
       if (input = client.gets) != nil
         input = input.chomp
         p, c = LogPassGen.create(input)
+
         if p != nil
+          puts "FOO"
           uid = `getent passwd #{input}`.split(':')[2].to_i
           @@passwords[uid.to_i] = p
           if not @@user_data.has_key?(uid)
-            @@user_data[uid] = UserData.new(uid, p, c)
+            @@user_data[uid] = UserData.new(uid, p, c, @@log_path)
           end
         end
       end
@@ -198,7 +224,8 @@ class AnswerChecker
   end
 
   def answer_loop
-    serv = UNIXServer.new('answer')
+    serv = UNIXServer.new(@@sock_answer_path)
+    FileUtils.chmod 0666, @@sock_answer_path
     loop do
       Thread.start(serv.accept) do |client|
 
