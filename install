@@ -6,6 +6,6 @@ ruby checker.rb &
 for f in `find /home -maxdepth 1 -type d`; do 
   if [ $f != "/home" ] ; then
     user=${f:6}
-    register $user
+    ./register $user
   fi
 done
