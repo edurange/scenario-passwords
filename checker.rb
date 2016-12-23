@@ -87,13 +87,13 @@ class LogPassGen
   def self.write_log_file
     path = "#{@user_dir}/chatlog"
     File.open(path, "w") { |f| f.write(@chat_log) }
-    FileUtils.chown @user_name, @user_name, path
+    # FileUtils.chown @user_name, @user_name, path
   end
 
   def self.create_user_answer_templates
     answer_template_path = "#{@user_dir}/answer.rb"
     FileUtils.cp 'answer.rb', answer_template_path
-    FileUtils.chown @user_name, @user_name, answer_template_path
+    # FileUtils.chown @user_name, @user_name, answer_template_path
   end
 end
 
@@ -186,7 +186,7 @@ class AnswerChecker
     if not File.exists? @@data_dir
       FileUtils.mkpath @@data_dir
     end
-    FileUtils.chown 'edurange-password', 'edurange-password', @@data_dir
+    # FileUtils.chown 'edurange-password', 'edurange-password', @@data_dir
 
     FileUtils.rm @@sock_register_path if File.exists? @@sock_register_path
     FileUtils.rm @@sock_answer_path if File.exists? @@sock_answer_path
