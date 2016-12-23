@@ -28,6 +28,7 @@ class LogPassGen
 
     @passwords = {}
     @chat_log = File.open("data/chatlog.txt", "r").read()
+    @chat_log = @chat_log.encode!('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
 
     self.set_time
     self.set_characters
