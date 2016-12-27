@@ -172,7 +172,7 @@ class AnswerChecker
     end
   end
 
-  @@data_dir = '/var/run/edurange/passwords'
+  @@data_dir = './'
   @@sock_register_path = "#{@@data_dir}/register.sock"
   @@sock_answer_path = "#{@@data_dir}/answer.sock"
   @@log_path = "#{@@data_dir}/log"
