@@ -175,7 +175,7 @@ class AnswerChecker
   @@data_dir = './'
   @@sock_register_path = "#{@@data_dir}/register.sock"
   @@sock_answer_path = "#{@@data_dir}/answer.sock"
-  @@log_path = "#{@@data_dir}/log"
+  @@userdata_path = "#{@@data_dir}/userdata"
   @@runlog_path = "#{@@data_dir}/runlog"
 
   @@passwords = {}
@@ -193,7 +193,7 @@ class AnswerChecker
     FileUtils.rm @@sock_register_path if File.exists? @@sock_register_path
     FileUtils.rm @@sock_answer_path if File.exists? @@sock_answer_path
 
-    FileUtils.mkdir @@log_path if not File.exists? @@log_path
+    FileUtils.mkdir @@userdata_path if not File.exists? @@userdata_path
 
     @@runlog = File.open(@@runlog_path, "w")
     
@@ -218,7 +218,7 @@ class AnswerChecker
           @@runlog.write("uid: #{uid}")
           @@passwords[uid.to_i] = p
           if not @@user_data.has_key?(uid)
-            @@user_data[uid] = UserData.new(uid, p, c, @@log_path)
+            @@user_data[uid] = UserData.new(uid, p, c, @@userdata_path)
           end
         else
           @@runlog.write("LogPassGen failed")
