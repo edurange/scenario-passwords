@@ -176,6 +176,7 @@ class AnswerChecker
   @@sock_register_path = "#{@@data_dir}/register.sock"
   @@sock_answer_path = "#{@@data_dir}/answer.sock"
   @@log_path = "#{@@data_dir}/log"
+  @@runlog_path = "#{@@data_dir}/runlog"
 
   @@passwords = {}
   @@user_ids = {}
@@ -193,6 +194,8 @@ class AnswerChecker
     FileUtils.rm @@sock_answer_path if File.exists? @@sock_answer_path
 
     FileUtils.mkdir @@log_path if not File.exists? @@log_path
+
+    @@runlog = File.open(@@runlog_path, "w")
     
     Thread.new do 
       register_loop
@@ -208,15 +211,17 @@ class AnswerChecker
 
       if (input = client.gets) != nil
         input = input.chomp
+        @@runlog.write("register:read: #{input}")
         p, c = LogPassGen.create(input)
-
         if p != nil
-          puts "FOO"
           uid = `getent passwd #{input}`.split(':')[2].to_i
+          @@runlog.write("uid: #{uid}")
           @@passwords[uid.to_i] = p
           if not @@user_data.has_key?(uid)
             @@user_data[uid] = UserData.new(uid, p, c, @@log_path)
           end
+        else
+          @@runlog.write("LogPassGen failed")
         end
       end
 
