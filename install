@@ -7,8 +7,6 @@ sleep 5
 for f in `find /home -maxdepth 1 -type d`; do 
   if [ $f != "/home" ] ; then
     user=${f:6}
-    echo $user >> output_test
     ./register $user
-    echo 'done' >> output_test
   fi
 done
