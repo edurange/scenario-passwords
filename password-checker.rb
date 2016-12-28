@@ -21,8 +21,9 @@ class LogPassGen
     "_streetname_"
   ]
 
-  def self.create user_name
+  def self.create user_name, answersockpath
     @user_name = user_name
+    @answersockpath = answersockpath
     @user_dir = "#{@home_dir}/#{user_name}"
     return nil, nil if not File.exists? @user_dir
 
@@ -93,7 +94,9 @@ class LogPassGen
 
   def self.create_user_answer_templates
     answer_template_path = "#{@user_dir}/answer.rb"
-    FileUtils.cp 'answer.rb', answer_template_path
+    ans = File.open('answer.rb', 'r').read.gsub("SOCKPATH", @answersockpath)
+    File.open(answer_template_path, 'w') { |f| f.write(ans) }
+    #FileUtils.cp 'answer.rb', answer_template_path
     FileUtils.chown @user_name, @user_name, answer_template_path
   end
 end
@@ -172,7 +175,7 @@ class AnswerChecker
 
   @@data_dir = './'
   @@sock_register_path = "#{@@data_dir}/register.sock"
-  @@sock_answer_path = "#{@@data_dir}/answer.sock"
+  @@sock_answer_path = "/var/run/edurange-password-answer.sock"
   @@userdata_path = "#{@@data_dir}/userdata"
   @@log_path = "#{@@data_dir}/log"
 
@@ -215,23 +218,24 @@ class AnswerChecker
   def register_loop
     serv = UNIXServer.new(@@sock_register_path)
     FileUtils.chmod 0600, @@sock_register_path
-    @@runlog.write "register:start\n"
+    @@runlog.write "register: started\n"
     loop do
       client = serv.accept
       
       if (input = client.gets) != nil
         input = input.chomp
-        @@runlog.write("register:read: #{input}")
-        p, c = LogPassGen.create(input)
+        p, c = LogPassGen.create(input, @@sock_answer_path)
         if p != nil
           uid = `getent passwd #{input}`.split(':')[2].to_i
-          @@runlog.write("uid: #{uid}")
           @@passwords[uid.to_i] = p
           if not @@user_data.has_key?(uid)
             @@user_data[uid] = UserData.new(uid, p, c, @@userdata_path)
+            @@runlog.write "register: registered user '#{input}'\n"
+          else
+            @@runlog.write "register:user already exists\n"
           end
         else
-          @@runlog.write("LogPassGen failed")
+          @@runlog.write("register: failed to register '#{input}'\n")
         end
       end
 
@@ -247,9 +251,10 @@ class AnswerChecker
 
         # get userid
         userid = client.getpeereid[0]
-
+        @@runlog.write "answer: #{userid} connected\n"
         # only allow registered users to connect
         if not @@user_data.has_key?(userid)
+          @@runlog.write "answer: #{userid} user not registered\n"
           client.puts "not-registered"
           client.close
           next
@@ -257,6 +262,7 @@ class AnswerChecker
 
         # only allow one connection per user
         if @@user_ids.has_key? userid
+          @@runlog.write "answer: #{userid} already has connection\n" 
           client.close
           next
         end
@@ -264,10 +270,17 @@ class AnswerChecker
 
         # get input
         until (input = client.gets) == nil
+          
+          @@runlog.write "answer: #{userid} got #{input}"
 
           # split input
           split = input.split(':')
-          next if split.size < 2
+          if split.size < 2
+            @@runlog.write "answer: #{userid} bad format\n"
+            client.puts 0
+            next
+          end
+
           name = split[0].strip
           password = split[1].strip
 
@@ -275,7 +288,9 @@ class AnswerChecker
           if @@passwords.has_key?(userid) && @@passwords[userid].has_key?(name) && @@passwords[userid][name].has_key?(password)
             client.puts @@passwords[userid][name][password]
             @@user_data[userid].add_correct(name, password, @@passwords[userid][name][password])
+            @@runlog.write "answer: #{userid} correct\n" 
           else
+            @@runlog.write "answer: #{userid} wrong\n"
             client.puts 0
           end
 
@@ -292,6 +307,7 @@ class AnswerChecker
         end
 
         # remove user
+        @@runlog.write "answer: #{userid} disconnected\n"
         @@user_ids.delete userid
         client.close
       end
