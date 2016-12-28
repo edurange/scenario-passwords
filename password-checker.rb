@@ -208,13 +208,13 @@ class AnswerChecker
       begin
         register_loop
       rescue => e
-        @@runlog.write("register:#{e.message} #{e.class}\n")
+        @@runlog.write("register:#{e.message} #{e.class} #{e.backtrace}\n")
       end
     end
     begin
       answer_loop
     rescue => e
-      @@runlog.write("answer:#{e.message} #{e.class}\n")
+      @@runlog.write("answer:#{e.message} #{e.class} #{e.backtrace}\n")
     end
   end
 
