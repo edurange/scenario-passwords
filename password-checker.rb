@@ -44,7 +44,7 @@ class LogPassGen
   def self.get_random_vars
     @vars = {}
     @var_holders.each do |var_holder|
-      arr = File.open("#{template_data_path}/#{var_holder}.txt", "r").read().split("\n")
+      arr = File.open("#{@template_data_path}/#{var_holder}.txt", "r").read().split("\n")
       var = arr[rand(arr.length)]
       @vars[var_holder] = var
       @chat_log.gsub!(var_holder, var)
