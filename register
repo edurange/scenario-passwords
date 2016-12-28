@@ -1,2 +1,2 @@
 #!/bin/bash
-echo $1 | socat UNIX-CONNECT:/var/run/edurange/passwords/register.sock STDIN
+echo $1 | socat UNIX-CONNECT:register.sock STDIN
