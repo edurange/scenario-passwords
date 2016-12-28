@@ -200,7 +200,10 @@ class AnswerChecker
     @@runlog = File.open(@@log_path, "w")
     @@runlog.sync = true
     @@runlog.write "starting:#{Time.now}\n"    
-  
+
+    @@regserv = UNIXServer.new(@@sock_register_path)
+    FileUtils.chmod 0600, @@sock_register_path
+
     Thread.new do 
       begin
         register_loop
@@ -216,11 +219,9 @@ class AnswerChecker
   end
 
   def register_loop
-    serv = UNIXServer.new(@@sock_register_path)
-    FileUtils.chmod 0600, @@sock_register_path
-    @@runlog.write "register: started\n"
+   @@runlog.write "register: started\n"
     loop do
-      client = serv.accept
+      client = @@regserv.accept
       
       if (input = client.gets) != nil
         input = input.chomp
