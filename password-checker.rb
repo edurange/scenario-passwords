@@ -225,21 +225,25 @@ class AnswerChecker
       
       if (input = client.gets) != nil
         input = input.chomp
-        p, c = LogPassGen.create(input, @@sock_answer_path)
-        if p != nil
-          uid = `getent passwd #{input}`.split(':')[2].to_i
-          @@passwords[uid.to_i] = p
-          if not @@user_data.has_key?(uid)
-            @@user_data[uid] = UserData.new(uid, p, c, @@userdata_path)
-            @@runlog.write "register: registered user '#{input}'\n"
+        p = nil
+        begin
+          p, c = LogPassGen.create(input, @@sock_answer_path)
+          if p != nil
+            uid = `getent passwd #{input}`.split(':')[2].to_i
+            @@passwords[uid.to_i] = p
+            if not @@user_data.has_key?(uid)
+              @@user_data[uid] = UserData.new(uid, p, c, @@userdata_path)
+              @@runlog.write "register: registered user '#{input}'\n"
+            else
+              @@runlog.write "register:user already exists\n"
+            end
           else
-            @@runlog.write "register:user already exists\n"
+            @@runlog.write("register: failed to register '#{input}'\n")
           end
-        else
-          @@runlog.write("register: failed to register '#{input}'\n")
+        rescue
+         @@runlog.write("register: error registering '#{input}'\n")
         end
-      end
-
+      end 
       client.close
     end
   end
