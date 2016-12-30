@@ -93,11 +93,17 @@ class LogPassGen
   end
 
   def self.create_user_answer_templates
+    # for ruby script
     answer_template_path = "#{@user_dir}/answer.rb"
     ans = File.open('answer.rb', 'r').read.gsub("SOCKPATH", @answersockpath)
     File.open(answer_template_path, 'w') { |f| f.write(ans) }
-    #FileUtils.cp 'answer.rb', answer_template_path
     FileUtils.chown @user_name, @user_name, answer_template_path
+
+    # for ptyhon script
+    path = "#{@user_dir}/answer.py"
+    ans = File.open('answer.py', 'r').read.gsub("SOCKPATH", @answersockpath)
+    File.open(path, 'w') { |f| f.write(ans) }
+    FileUtils.chown @user_name, @user_name, path
   end
 end
 
